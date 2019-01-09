@@ -15,3 +15,4 @@ exports.AddBookmark = require("./requests/add-bookmark").AddBookmark;
 exports.SetViewPortion = require("./requests/set-view-portion").SetViewPortion;
 exports.RecommendItemsToUser = require("./requests/recommend-items-to-user").RecommendItemsToUser;
 exports.RecommendItemsToItem = require("./requests/recommend-items-to-item").RecommendItemsToItem;
+exports.ListUserDetailViews = require("./requests/list-user-detail-views").ListUserDetailViews;

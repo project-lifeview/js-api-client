@@ -14,11 +14,13 @@ class ApiClient {
    * @param {string} publicToken - Corresponding public token
    * @param {Object} options - Other custom options
    */
-  constructor (databaseId, publicToken, options) {
+  constructor (databaseId, publicToken, privateToken, options) {
       this.databaseId = databaseId;
       this.publicToken = publicToken;
+      this.privateToken = privateToken;
       this.options = options || {};
       this.baseUri = this.options.baseUri || process.env.RAPI_URI || 'client-rapi.recombee.com';
+      this.privateBaseUri = 'rapi.recombee.com';
       this.useHttps = ('useHttps' in this.options) ? this.options.useHttps : true;
       this.async = ('async' in this.options) ? this.options.async : true;
   }
@@ -38,11 +40,13 @@ class ApiClient {
       })
     }
 
-    var signedUrl = this._signUrl(request.path);
-    var url = ((this.useHttps) ? 'https://' : 'http://') + this.baseUri + signedUrl;
+    var signedUrl = this._signUrl(request.path, request.usePrivateToken);
+    var url = ((this.useHttps) ? 'https://' : 'http://') + 
+      (request.usePrivateToken ? this.privateBaseUri : this.baseUri) + 
+      signedUrl;
 
     var xmlhttp = new XMLHttpRequest();
-    xmlhttp.open("POST", url, this.async);
+    xmlhttp.open(request.method, url, this.async);
     xmlhttp.setRequestHeader("Accept", "application/json");
     xmlhttp.setRequestHeader("Content-Type", "text/plain");
 
@@ -71,16 +75,28 @@ class ApiClient {
     xmlhttp.send(JSON.stringify(request.bodyParameters()));
   }
 
-  _signUrl (req_part) {
-    let url = '/' + this.databaseId + req_part;
-    url += (req_part.indexOf("?") == -1 ? "?" : "&" ) + "frontend_timestamp=" + parseInt(new Date().getTime() / 1000);
-    
-    let shaObj = new jsSHA("SHA-1", "TEXT");
-    shaObj.setHMACKey(this.publicToken, "TEXT");
-    shaObj.update(url);
+  _signUrl (req_part, usePrivateToken) {
+    if (usePrivateToken) {
+      let url = '/' + this.databaseId + req_part;
+      url += (req_part.indexOf("?") == -1 ? "?" : "&" ) + "hmac_timestamp=" + parseInt(new Date().getTime() / 1000);
+      
+      let shaObj = new jsSHA("SHA-1", "TEXT");
+      shaObj.setHMACKey(this.privateToken, "TEXT");
+      shaObj.update(url);
 
-    url += "&frontend_sign=" + shaObj.getHMAC("HEX");
-    return url;
+      url += "&hmac_sign=" + shaObj.getHMAC("HEX");
+      return url;
+    } else {
+      let url = '/' + this.databaseId + req_part;
+      url += (req_part.indexOf("?") == -1 ? "?" : "&" ) + "frontend_timestamp=" + parseInt(new Date().getTime() / 1000);
+      
+      let shaObj = new jsSHA("SHA-1", "TEXT");
+      shaObj.setHMACKey(this.publicToken, "TEXT");
+      shaObj.update(url);
+
+      url += "&frontend_sign=" + shaObj.getHMAC("HEX");
+      return url;
+    }
   }
 }
 
